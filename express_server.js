@@ -31,3 +31,9 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+app.get("/urls/:id", (req, res) => {
+  const id = req.params.id;
+  const longURL = urlDatabase[id]; // Retrieve the longURL based on the id from your data source
+  const templateVars = { id: id, longURL: longURL };
+  res.render("urls_show", templateVars);
+});
