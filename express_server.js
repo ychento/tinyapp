@@ -57,7 +57,24 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const id = generateRandomString(); // Generate a random id
+  const longURL = req.body.longURL; // Get the longURL from the request body
+
+  urlDatabase[id] = longURL; // Save the id-longURL pair to the urlDatabase
+
+  res.redirect(`/urls/${id}`); // Redirect to the page displaying the newly created short URL
 });
+
+app.get("/u/:id", (req, res) => {
+  const id = req.params.id;
+  const longURL = urlDatabase[id];
+
+  if (longURL) {
+    res.redirect(longURL); // Redirect to the longURL
+  } else {
+    res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
+  }
+});
+
+
 
