@@ -76,5 +76,14 @@ app.get("/u/:id", (req, res) => {
   }
 });
 
+app.post("/urls/:id/delete", (req, res) => {
+  const id = req.params.id;
 
+  if (urlDatabase[id]) {
+    delete urlDatabase[id]; // Remove the URL resource from the database
+    res.redirect("/urls"); // Redirect to the URLs index page
+  } else {
+    res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
+  }
+});
 
