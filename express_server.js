@@ -1,8 +1,13 @@
 const express = require("express");
+const cookieParser = require("cookie-parser"); // Import the cookie-parser module
 const app = express();
 const PORT = 8080;
 
+
+
 app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); 
 
 function generateRandomString() {
   let result = "";
@@ -41,13 +46,26 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = {
+    username: req.cookies.username, // Access the "username" property from req.cookies
+    urls: urlDatabase, // Pass the urlDatabase to the template as the 'urls' variable
+    // ... any other variables needed for the template
+  };
   res.render("urls_index", templateVars);
 });
 
+
+
+
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = {
+    username: req.cookies.username,
+    // ... any other variables needed for the template
+  };
+  res.render("urls_new", templateVars);
 });
+
+
 
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
@@ -99,4 +117,17 @@ app.post("/urls/:id/update", (req, res) => {
     res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
   }
 });
+
+
+app.post('/login', (req, res) => {
+  // Retrieve the username from the request body
+  const { username } = req.body;
+  
+  // Set the "username" cookie with the provided value
+  res.cookie('username', username);
+  
+  // Redirect the browser back to the /urls page
+  res.redirect('/urls');
+});
+
 
