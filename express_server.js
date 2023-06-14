@@ -87,3 +87,16 @@ app.post("/urls/:id/delete", (req, res) => {
   }
 });
 
+
+app.post("/urls/:id/update", (req, res) => {
+  const id = req.params.id;
+  const updatedLongURL = req.body.longURL;
+
+  if (urlDatabase[id]) {
+    urlDatabase[id] = updatedLongURL; // Update the longURL in the database
+    res.redirect(`/urls/${id}`); // Redirect to the updated URL details page
+  } else {
+    res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
+  }
+});
+
