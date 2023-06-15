@@ -2,6 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser"); // Import the cookie-parser module
 const app = express();
 const PORT = 8080;
+const users = {};
 
 
 
@@ -27,6 +28,7 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
@@ -46,8 +48,10 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const userId = req.cookies.user_id;
+  const user = users[userId];
   const templateVars = {
-    username: req.cookies.username, // Access the "username" property from req.cookies
+    user: user,
     urls: urlDatabase, // Pass the urlDatabase to the template as the 'urls' variable
     // ... any other variables needed for the template
   };
@@ -58,10 +62,8 @@ app.get("/urls", (req, res) => {
 
 
 app.get("/urls/new", (req, res) => {
-  const templateVars = {
-    username: req.cookies.username,
-    // ... any other variables needed for the template
-  };
+  const userId = req.cookies.user_id;
+  const user = users[userId];
   res.render("urls_new", templateVars);
 });
 
@@ -70,7 +72,7 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const id = req.params.id;
   const longURL = urlDatabase[id]; // Retrieve the longURL based on the id from your data source
-  const templateVars = { id: id, longURL: longURL, username: req.cookies.username }; // Retrieve the 'username' from the cookie
+  const templateVars = { id: id, longURL: longURL, user: user }; // Retrieve the 'username' from the cookie
 
   res.render('urls_show', templateVars); // Pass the 'templateVars' object to the 'res.render()' function
 });
@@ -139,7 +141,48 @@ app.get("/logout", (req, res) => {
   res.redirect("/urls");
 });
 
-app.get('/register', (req, res) => {
-  res.render('register');
+app.get("/register", (req, res) => {
+  res.render("register");
 });
 
+
+app.post('/register', (req, res) => {
+  const { email, password } = req.body;
+
+  // Check if the email or password is empty
+  if (!email || !password) {
+    res.status(400).send("Email or password cannot be empty");
+    return;
+  }
+
+  // Check if the email already exists in the users object
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      res.status(400).send("Email already exists");
+      return;
+    }
+  }
+
+  // Generate a random user ID
+  const userId = generateRandomString();
+
+  // Create a new user object with the generated ID, email, and password
+  const newUser = {
+    id: userId,
+    email,
+    password
+  };
+
+  // Add the new user to the users object
+  users[userId] = newUser;
+
+  // Set the user_id cookie with the generated ID
+  res.cookie("user_id", userId);
+
+
+  res.redirect('/urls');
+});
+
+app.get('/login', (req, res) => {
+  res.render('login');
+});
