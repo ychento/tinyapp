@@ -2,13 +2,13 @@ const express = require("express");
 const cookieParser = require("cookie-parser"); // Import the cookie-parser module
 const app = express();
 const PORT = 8080;
-const users = {};
-
+const users = require("./users")
 
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); 
+
 
 function generateRandomString() {
   let result = "";
@@ -21,6 +21,15 @@ function generateRandomString() {
   }
 
   return result;
+}
+
+//  find a user object with a specific email in the usersDB object and return that user object.
+const getUserByEmail = (users, email) => {
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      return users[userId]; // return user object
+    }
+  }
 }
 
 const urlDatabase = {
@@ -53,12 +62,9 @@ app.get("/urls", (req, res) => {
   const templateVars = {
     user: user,
     urls: urlDatabase, // Pass the urlDatabase to the template as the 'urls' variable
-    // ... any other variables needed for the template
   };
   res.render("urls_index", templateVars);
 });
-
-
 
 
 app.get("/urls/new", (req, res) => {
@@ -66,7 +72,6 @@ app.get("/urls/new", (req, res) => {
   const user = users[userId];
   res.render("urls_new", templateVars);
 });
-
 
 
 app.get("/urls/:id", (req, res) => {
@@ -123,23 +128,33 @@ app.post("/urls/:id/update", (req, res) => {
 
 
 app.post('/login', (req, res) => {
-  // Retrieve the username from the request body
-  const { username } = req.body;
+  // Retrieve the email and password from the request body
+  const { email, password } = req.body;
   
-  // Set the "username" cookie with the provided value
-  res.cookie('username', username);
-  
+  // Find the user object with the matching email in the users object
+  const user = getUserByEmail(users, email)
+
+  if(!user) 
+    return res.status(403).send('User is not found');
+  if(password !== user.password)
+    return res.status(403).send("Email and password don't match.");
+
+  res.cookie('user_id', user.id);
+
   // Redirect the browser back to the /urls page
   res.redirect('/urls');
+
 });
 
-app.get("/logout", (req, res) => {
-  // Clear the username cookie
-  res.clearCookie("username");
+app.post("/logout", (req, res) => {
+  // Clear the user_id cookie
+  res.clearCookie("user_id");
 
-  // Redirect the user back to the /urls page
-  res.redirect("/urls");
+  // Redirect the user back to the /login page
+  res.redirect("/login");
 });
+
+
 
 app.get("/register", (req, res) => {
   res.render("register");
@@ -156,12 +171,8 @@ app.post('/register', (req, res) => {
   }
 
   // Check if the email already exists in the users object
-  for (const userId in users) {
-    if (users[userId].email === email) {
-      res.status(400).send("Email already exists");
-      return;
-    }
-  }
+  const user = getUserByEmail(users, email)
+  if (user) return res.status(400).send("Email already exists");
 
   // Generate a random user ID
   const userId = generateRandomString();
@@ -178,7 +189,6 @@ app.post('/register', (req, res) => {
 
   // Set the user_id cookie with the generated ID
   res.cookie("user_id", userId);
-
 
   res.redirect('/urls');
 });
