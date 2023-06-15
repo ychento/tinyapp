@@ -10,6 +10,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); 
 
 
+
 function generateRandomString() {
   let result = "";
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -23,6 +24,30 @@ function generateRandomString() {
   return result;
 }
 
+function urlsForUser(userIDx) { // userIDx is a placeholder
+  const userUrls = {};
+
+  for (const urlId in urlDatabase) {
+    if (urlDatabase[urlId].userID === userIDx) {
+      userUrls[urlId] = urlDatabase[urlId];
+    }
+  }
+
+  return userUrls;
+}
+
+const urlDatabase = {
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW",
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW",
+  },
+};
+
+
 //  find a user object with a specific email in the usersDB object and return that user object.
 const getUserByEmail = (users, email) => {
   for (const userId in users) {
@@ -32,10 +57,7 @@ const getUserByEmail = (users, email) => {
   }
 }
 
-const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
-};
+
 
 
 app.use(express.urlencoded({ extended: true }));
@@ -58,10 +80,21 @@ app.get("/hello", (req, res) => {
 
 app.get("/urls", (req, res) => {
   const userId = req.cookies.user_id;
+  console.log (userId)
   const user = users[userId];
+
+  // check if the user is logged in
+  if (!userId || !user) {
+    const templateVars = {
+      errorMessage: "Please log in or register to view URLs",
+    };
+    res.render("error", templateVars);
+    return
+  }
+
   const templateVars = {
     user: user,
-    urls: urlDatabase, // Pass the urlDatabase to the template as the 'urls' variable
+    urls: urlsForUser (userId),
   };
   res.render("urls_index", templateVars);
 });
@@ -72,22 +105,44 @@ app.get("/urls/new", (req, res) => {
   const user = users[userId];
 
   // check if the user is logged in
-  if (!userId || !users[userId]) {
+  if (!userId || !user) {
     res.redirect("/login"); // if user is not logged in, redirect to the login page
     return;
   }
+
+  const templateVars = {
+    user: user,
+  };
   
   res.render("urls_new", templateVars);
 });
 
 
 app.get("/urls/:id", (req, res) => {
-  const id = req.params.id;
-  const longURL = urlDatabase[id]; // Retrieve the longURL based on the id from your data source
-  const templateVars = { id: id, longURL: longURL, user: user }; // Retrieve the 'username' from the cookie
+  const userId = req.cookies.user_id;
 
-  res.render('urls_show', templateVars); // Pass the 'templateVars' object to the 'res.render()' function
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to view this page.");
+    return;
+  }
+
+  const id = req.params.id;
+
+  // Check if the URL belongs to the logged-in user
+  if (!urlDatabase[id].userID || urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to view this page.");
+    return;
+  }
+
+  const longURL = urlDatabase[id].longURL;
+  const user = users[userId];
+  const templateVars = { id, longURL, user };
+
+  res.render('urls_show', templateVars);
 });
+
+
 
 app.post("/urls", (req, res) => {
   const userId = req.cookies.user_id;
@@ -98,20 +153,20 @@ app.post("/urls", (req, res) => {
     return;
   }
   
-  const id = generateRandomString(); // Generate a random id
+  const id = generateRandomString(); // Generate a random id (shortURL)
   const longURL = req.body.longURL; // Get the longURL from the request body
 
-  urlDatabase[id] = longURL; // Save the id-longURL pair to the urlDatabase
+  urlDatabase[id].longURL = longURL; // Save the id-longURL pair to the urlDatabase
 
   res.redirect(`/urls/${id}`); // Redirect to the page displaying the newly created short URL
 });
 
 app.get("/u/:id", (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id];
+  const url = urlDatabase[id];
 
-  if (longURL) {
-    res.redirect(longURL); // Redirect to the longURL
+  if ( url && url.longURL) {
+    res.redirect(url.longURL); // Redirect to the longURL
   } else {
     res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
   }
@@ -133,8 +188,8 @@ app.post("/urls/:id/update", (req, res) => {
   const id = req.params.id;
   const updatedLongURL = req.body.longURL;
 
-  if (urlDatabase[id]) {
-    urlDatabase[id] = updatedLongURL; // Update the longURL in the database
+  if (urlDatabase[id].longURL) {
+    urlDatabase[id].longURL = updatedLongURL; // Update the longURL in the database
     res.redirect(`/urls/${id}`); // Redirect to the updated URL details page
   } else {
     res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
