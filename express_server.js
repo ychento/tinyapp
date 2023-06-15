@@ -172,16 +172,68 @@ app.get("/u/:id", (req, res) => {
   }
 });
 
+
+
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
 
-  if (urlDatabase[id]) {
-    delete urlDatabase[id]; // Remove the URL resource from the database
-    res.redirect("/urls"); // Redirect to the URLs index page
-  } else {
-    res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
+  // Check if the URL ID exists
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL not found.");
+    return;
   }
+
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to perform this action.");
+    return;
+  }
+
+  // Check if the URL belongs to the logged-in user
+  if (urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to delete this URL.");
+    return;
+  }
+
+  delete urlDatabase[id]; // Remove the URL resource from the database
+  
+  
+  res.redirect("/urls"); 
 });
+
+
+// Edit URL
+app.post("/urls/:id", (req, res) => {
+  const userId = req.cookies.user_id;
+  const id = req.params.id;
+
+  // Check if the URL ID exists
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL not found.");
+    return;
+  }
+
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to perform this action.");
+    return;
+  }
+
+  // Check if the URL belongs to the logged-in user
+  if (urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to edit this URL.");
+    return;
+  }
+
+  // Update the longURL for the given URL ID
+  urlDatabase[id].longURL = req.body.updatedURL;
+
+  res.redirect("/urls");
+});
+
+
+
+
 
 
 app.post("/urls/:id/update", (req, res) => {
