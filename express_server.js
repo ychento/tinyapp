@@ -70,6 +70,13 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies.user_id;
   const user = users[userId];
+
+  // check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.redirect("/login"); // if user is not logged in, redirect to the login page
+    return;
+  }
+  
   res.render("urls_new", templateVars);
 });
 
@@ -83,6 +90,14 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
+  const userId = req.cookies.user_id;
+
+  // check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(403).send("You must be logged in to shorten URLs.");
+    return;
+  }
+  
   const id = generateRandomString(); // Generate a random id
   const longURL = req.body.longURL; // Get the longURL from the request body
 
@@ -126,6 +141,16 @@ app.post("/urls/:id/update", (req, res) => {
   }
 });
 
+app.get('/login', (req, res) => {
+  const userId = req.cookies.user_id;
+
+  // Check if the user is already logged in
+  if (userId && users[userId]) {
+    res.redirect("/urls"); // Redirect to the /urls page
+  } else {
+    res.render("login"); // Render the login page
+  }
+});
 
 app.post('/login', (req, res) => {
   // Retrieve the email and password from the request body
@@ -157,7 +182,15 @@ app.post("/logout", (req, res) => {
 
 
 app.get("/register", (req, res) => {
-  res.render("register");
+  const userId = req.cookies.user_id;
+
+  // check if the user is already logged in
+  if (userId && users[userId]) {
+    res.redirect("/urls"); // redirect to the /urls page
+  } else {
+    res.render("register"); // render the register page
+  }
+  
 });
 
 
@@ -193,6 +226,3 @@ app.post('/register', (req, res) => {
   res.redirect('/urls');
 });
 
-app.get('/login', (req, res) => {
-  res.render('login');
-});
