@@ -1,13 +1,19 @@
 const express = require("express");
-const cookieParser = require("cookie-parser"); // Import the cookie-parser module
 const app = express();
 const PORT = 8080;
-const users = require("./users")
+const users = require("./users");
+const { getUserByEmail } = require('./helpers');
+const bcrypt = require("bcryptjs");
+const cookieSession = require('cookie-session');
+
 
 
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser()); 
+app.use(cookieSession({
+  name: 'session',
+  keys: ['key1', 'key2'],
+}));
 
 
 
@@ -48,20 +54,6 @@ const urlDatabase = {
 };
 
 
-//  find a user object with a specific email in the usersDB object and return that user object.
-const getUserByEmail = (users, email) => {
-  for (const userId in users) {
-    if (users[userId].email === email) {
-      return users[userId]; // return user object
-    }
-  }
-}
-
-
-
-
-app.use(express.urlencoded({ extended: true }));
-
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -79,8 +71,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const userId = req.cookies.user_id;
-  console.log (userId)
+  const userId = req.session.user_id;
   const user = users[userId];
 
   // check if the user is logged in
@@ -101,7 +92,7 @@ app.get("/urls", (req, res) => {
 
 
 app.get("/urls/new", (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
   const user = users[userId];
 
   // check if the user is logged in
@@ -119,7 +110,7 @@ app.get("/urls/new", (req, res) => {
 
 
 app.get("/urls/:id", (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
 
   // Check if the user is logged in
   if (!userId || !users[userId]) {
@@ -145,7 +136,7 @@ app.get("/urls/:id", (req, res) => {
 
 
 app.post("/urls", (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
 
   // check if the user is logged in
   if (!userId || !users[userId]) {
@@ -204,7 +195,7 @@ app.post("/urls/:id/delete", (req, res) => {
 
 // Edit URL
 app.post("/urls/:id", (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
   const id = req.params.id;
 
   // Check if the URL ID exists
@@ -249,7 +240,7 @@ app.post("/urls/:id/update", (req, res) => {
 });
 
 app.get('/login', (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
 
   // Check if the user is already logged in
   if (userId && users[userId]) {
@@ -268,10 +259,12 @@ app.post('/login', (req, res) => {
 
   if(!user) 
     return res.status(403).send('User is not found');
-  if(password !== user.password)
-    return res.status(403).send("Email and password don't match.");
-
-  res.cookie('user_id', user.id);
+    
+  if(!bcrypt.compareSync(password, user.password)) {
+    return res.status(403).send("Email and password don't match.")
+  }
+  
+  req.session.user_id = user.id;
 
   // Redirect the browser back to the /urls page
   res.redirect('/urls');
@@ -280,7 +273,7 @@ app.post('/login', (req, res) => {
 
 app.post("/logout", (req, res) => {
   // Clear the user_id cookie
-  res.clearCookie("user_id");
+  delete req.session.user_id;
 
   // Redirect the user back to the /login page
   res.redirect("/login");
@@ -289,7 +282,7 @@ app.post("/logout", (req, res) => {
 
 
 app.get("/register", (req, res) => {
-  const userId = req.cookies.user_id;
+  const userId = req.session.user_id;
 
   // check if the user is already logged in
   if (userId && users[userId]) {
@@ -302,6 +295,7 @@ app.get("/register", (req, res) => {
 
 
 app.post('/register', (req, res) => {
+  
   const { email, password } = req.body;
 
   // Check if the email or password is empty
@@ -314,21 +308,25 @@ app.post('/register', (req, res) => {
   const user = getUserByEmail(users, email)
   if (user) return res.status(400).send("Email already exists");
 
+  // Hash the password using bcrypt
+  const hashedPassword = bcrypt.hashSync(password, 10);
+
   // Generate a random user ID
   const userId = generateRandomString();
 
   // Create a new user object with the generated ID, email, and password
   const newUser = {
     id: userId,
-    email,
-    password
+    email: email,
+    password: hashedPassword
   };
 
-  // Add the new user to the users object
+  // store the new user to the users object
   users[userId] = newUser;
 
   // Set the user_id cookie with the generated ID
-  res.cookie("user_id", userId);
+  // res.session("user_id", userId);
+  req.session.user_id = userId;
 
   res.redirect('/urls');
 });
