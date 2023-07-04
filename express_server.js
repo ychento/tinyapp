@@ -55,7 +55,13 @@ const urlDatabase = {
 
 
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  const userId = req.session.user_id;
+
+  if (userId && users[userId]) {
+    res.redirect("/urls");
+  } else {
+    res.redirect("/login");
+  }
 });
 
 app.listen(PORT, () => {
@@ -147,9 +153,37 @@ app.post("/urls", (req, res) => {
   const id = generateRandomString(); // Generate a random id (shortURL)
   const longURL = req.body.longURL; // Get the longURL from the request body
 
-  urlDatabase[id].longURL = longURL; // Save the id-longURL pair to the urlDatabase
+  urlDatabase[id] = { longURL: longURL, userID: userId }; // Save the id-longURL pair to the urlDatabase
 
   res.redirect(`/urls/${id}`); // Redirect to the page displaying the newly created short URL
+});
+
+app.post("/urls/:id", (req, res) => {
+  const userId = req.session.user_id;
+  const id = req.params.id;
+
+  // Check if the URL ID exists
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL not found.");
+    return;
+  }
+
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to perform this action.");
+    return;
+  }
+
+  // Check if the URL belongs to the logged-in user
+  if (urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to edit this URL.");
+    return;
+  }
+
+  // Update the longURL for the given URL ID
+  urlDatabase[id].longURL = req.body.longURL;
+
+  res.redirect("/urls");
 });
 
 app.get("/u/:id", (req, res) => {
@@ -190,36 +224,6 @@ app.post("/urls/:id/delete", (req, res) => {
   
   
   res.redirect("/urls"); 
-});
-
-
-// Edit URL
-app.post("/urls/:id", (req, res) => {
-  const userId = req.session.user_id;
-  const id = req.params.id;
-
-  // Check if the URL ID exists
-  if (!urlDatabase[id]) {
-    res.status(404).send("URL not found.");
-    return;
-  }
-
-  // Check if the user is logged in
-  if (!userId || !users[userId]) {
-    res.status(401).send("Please log in or register to perform this action.");
-    return;
-  }
-
-  // Check if the URL belongs to the logged-in user
-  if (urlDatabase[id].userID !== userId) {
-    res.status(403).send("You do not have permission to edit this URL.");
-    return;
-  }
-
-  // Update the longURL for the given URL ID
-  urlDatabase[id].longURL = req.body.updatedURL;
-
-  res.redirect("/urls");
 });
 
 
