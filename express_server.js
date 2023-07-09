@@ -7,15 +7,14 @@ const bcrypt = require("bcryptjs");
 const cookieSession = require('cookie-session');
 
 
-
-app.set("view engine", "ejs");
-app.use(express.urlencoded({ extended: true }));
 app.use(cookieSession({
   name: 'session',
   keys: ['key1', 'key2'],
 }));
 
-
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
+});
 
 function generateRandomString() {
   let result = "";
@@ -43,6 +42,7 @@ function urlsForUser(userIDx) { // userIDx is a placeholder
   return userUrls;
 }
 
+//App Database
 const urlDatabase = {
   b6UTxQ: {
     longURL: "https://www.tsn.ca",
@@ -54,6 +54,12 @@ const urlDatabase = {
   },
 };
 
+// Middleware setup
+app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: true }));
+
+
+
 
 app.get("/", (req, res) => {
   const userId = req.session.user_id;
@@ -63,19 +69,6 @@ app.get("/", (req, res) => {
   } else {
     res.redirect("/login");
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
-
-
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 // Route handler
@@ -100,6 +93,14 @@ app.get("/urls", (req, res) => {
 });
 
 
+
+
+app.get("/urls.json", (req, res) => {
+  res.json(urlDatabase);
+});
+
+
+// Routes to urls/new
 app.get("/urls/new", (req, res) => {
   const userId = req.session.user_id;
   const user = users[userId];
@@ -117,33 +118,7 @@ app.get("/urls/new", (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-
-app.get("/urls/:id", (req, res) => {
-  const userId = req.session.user_id;
-
-  // Check if the user is logged in
-  if (!userId || !users[userId]) {
-    res.status(401).send("Please log in or register to view this page.");
-    return;
-  }
-
-  const id = req.params.id;
-
-  // Check if the URL belongs to the logged-in user
-  if (!urlDatabase[id].userID || urlDatabase[id].userID !== userId) {
-    res.status(403).send("You do not have permission to view this page.");
-    return;
-  }
-
-  const longURL = urlDatabase[id].longURL;
-  const user = users[userId];
-  const templateVars = { id, longURL, user };
-
-  res.render('urls_show', templateVars);
-});
-
-
-
+//Create random shortURL link from /urls page
 app.post("/urls", (req, res) => {
   const userId = req.session.user_id;
 
@@ -159,6 +134,30 @@ app.post("/urls", (req, res) => {
   urlDatabase[id] = { longURL: longURL, userID: userId }; // Save the id-longURL pair to the urlDatabase
 
   res.redirect(`/urls/${id}`); // Redirect to the page displaying the newly created short URL
+});
+
+
+app.get("/urls/:id", (req, res) => {
+  const userId = req.session.user_id;
+  const id = req.params.id;
+
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to view this page.");
+    return;
+  }
+
+  // Check if the URL belongs to the logged-in user
+  if (!urlDatabase[id].userID || urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to view this page.");
+    return;
+  }
+  
+  const longURL = urlDatabase[id].longURL;
+  const user = users[userId];
+  const templateVars = { id, longURL, user };
+
+  res.render('urls_show', templateVars);
 });
 
 app.post("/urls/:id", (req, res) => {
@@ -186,7 +185,36 @@ app.post("/urls/:id", (req, res) => {
   // Update the longURL for the given URL ID
   urlDatabase[id].longURL = req.body.longURL;
 
-  res.redirect("/urls");
+  res.redirect(`/urls/${id}`);
+});
+
+app.get("/urls/:id/edit", (req, res) => {
+  const userId = req.session.user_id;
+  const id = req.params.id;
+
+  // Check if the URL ID exists
+  if (!urlDatabase[id]) {
+    res.status(404).send("URL not found.");
+    return;
+  }
+
+  // Check if the user is logged in
+  if (!userId || !users[userId]) {
+    res.status(401).send("Please log in or register to view this page.");
+    return;
+  }
+
+  // Check if the URL belongs to the logged-in user
+  if (urlDatabase[id].userID !== userId) {
+    res.status(403).send("You do not have permission to edit this URL.");
+    return;
+  }
+
+  const longURL = urlDatabase[id].longURL;
+  const user = users[userId];
+  const templateVars = { id, longURL, user };
+
+  res.render('urls_show', templateVars);
 });
 
 app.get("/u/:id", (req, res) => {
@@ -231,21 +259,17 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 
+// app.post("/urls/:id/update", (req, res) => {
+//   const id = req.params.id;
+//   const updatedLongURL = req.body.longURL;
 
-
-
-
-app.post("/urls/:id/update", (req, res) => {
-  const id = req.params.id;
-  const updatedLongURL = req.body.longURL;
-
-  if (urlDatabase[id].longURL) {
-    urlDatabase[id].longURL = updatedLongURL; // Update the longURL in the database
-    res.redirect(`/urls/${id}`); // Redirect to the updated URL details page
-  } else {
-    res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
-  }
-});
+//   if (urlDatabase[id].longURL) {
+//     urlDatabase[id].longURL = updatedLongURL; // Update the longURL in the database
+//     res.redirect(`/urls/${id}`); // Redirect to the updated URL details page
+//   } else {
+//     res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
+//   }
+// });
 
 app.get('/login', (req, res) => {
   const userId = req.session.user_id;
