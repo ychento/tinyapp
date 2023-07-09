@@ -24,18 +24,27 @@
       <div class="card-footer text-muted">
 
 
-        <form method="POST" action="/urls/<%= id %>/update">
+        <!-- <form method="POST" action="/urls/<%= id %>/update">
           <div class="form-group">
             <label for="updatedURL">New URL:</label>
             <input type="text" class="form-control" id="updatedURL" name="updatedURL" value="<%= longURL %>">
           </div>
-          <button type="submit" class="btn btn-primary">Update</button>
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form> -->
+
+        <form method="POST" action="/urls/<%= id %>">
+          <div class="form-group">
+            <label for="updatedURL">New URL:</label>
+            <input type="text" class="form-control" id="updatedURL" name="updatedURL" value="<%= longURL %>">
+          </div>
+          <button type="submit" class="btn btn-primary">Submit</button>
         </form>
 
 
 
       </div>
     </div>
+
     <!-- Bootstrap JS -->
     <script
       src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
