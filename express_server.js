@@ -30,6 +30,7 @@ function generateRandomString() {
   return result;
 }
 
+// Define the urlsForUser function
 function urlsForUser(userIDx) { // userIDx is a placeholder
   const userUrls = {};
 
@@ -68,6 +69,7 @@ app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
 
+
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
@@ -76,6 +78,7 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
+// Route handler
 app.get("/urls", (req, res) => {
   const userId = req.session.user_id;
   const user = users[userId];
@@ -201,6 +204,7 @@ app.get("/u/:id", (req, res) => {
 
 app.post("/urls/:id/delete", (req, res) => {
   const id = req.params.id;
+  const userId = req.session.user_id;
 
   // Check if the URL ID exists
   if (!urlDatabase[id]) {
