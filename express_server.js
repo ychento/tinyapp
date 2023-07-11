@@ -38,6 +38,7 @@ function urlsForUser(userIDx) { // userIDx is a placeholder
       userUrls[urlId] = urlDatabase[urlId];
     }
   }
+  console.log(userUrls);
 
   return userUrls;
 }
@@ -143,16 +144,22 @@ app.get("/urls/:id", (req, res) => {
 
   // Check if the user is logged in
   if (!userId || !users[userId]) {
-    res.status(401).send("Please log in or register to view this page.");
+    res.status(401).send("401 Please log in or register to view this page.");
+    return;
+  }
+
+  // Check if the URL exists in the database
+  if (!urlDatabase[id]) {
+    res.status(404).send("404 URL not found.");
     return;
   }
 
   // Check if the URL belongs to the logged-in user
   if (!urlDatabase[id].userID || urlDatabase[id].userID !== userId) {
-    res.status(403).send("You do not have permission to view this page.");
+    res.status(403).send("403 You do not have permission to view this page.");
     return;
   }
-  
+
   const longURL = urlDatabase[id].longURL;
   const user = users[userId];
   const templateVars = { id, longURL, user };
@@ -185,7 +192,8 @@ app.post("/urls/:id", (req, res) => {
   // Update the longURL for the given URL ID
   urlDatabase[id].longURL = req.body.longURL;
 
-  res.redirect(`/urls/${id}`);
+  // res.redirect(`/urls/${id}`);
+  res.redirect(`/urls`);
 });
 
 app.get("/urls/:id/edit", (req, res) => {
@@ -259,18 +267,6 @@ app.post("/urls/:id/delete", (req, res) => {
 });
 
 
-// app.post("/urls/:id/update", (req, res) => {
-//   const id = req.params.id;
-//   const updatedLongURL = req.body.longURL;
-
-//   if (urlDatabase[id].longURL) {
-//     urlDatabase[id].longURL = updatedLongURL; // Update the longURL in the database
-//     res.redirect(`/urls/${id}`); // Redirect to the updated URL details page
-//   } else {
-//     res.status(404).send("URL not found"); // Handle the case when the id is not found in the database
-//   }
-// });
-
 app.get('/login', (req, res) => {
   const userId = req.session.user_id;
 
@@ -305,7 +301,10 @@ app.post('/login', (req, res) => {
 
 app.post("/logout", (req, res) => {
   // Clear the user_id cookie
-  delete req.session.user_id;
+  delete req.session;
+  req.session = null;
+  res.clearCookie ("session",{path:"/"});
+  res.clearCookie ("session.sig",{path:"/"});
 
   // Redirect the user back to the /login page
   res.redirect("/login");
