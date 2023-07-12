@@ -82,7 +82,7 @@ app.get("/urls", (req, res) => {
     const templateVars = {
       errorMessage: "Please log in or register to view URLs",
     };
-    res.render("error", templateVars);
+    res.render("error", { user: user, errorMessage: templateVars.errorMessage });
     return
   }
 
@@ -118,6 +118,8 @@ app.get("/urls/new", (req, res) => {
   
   res.render("urls_new", templateVars);
 });
+
+
 
 //Create random shortURL link from /urls page
 app.post("/urls", (req, res) => {
@@ -269,12 +271,13 @@ app.post("/urls/:id/delete", (req, res) => {
 
 app.get('/login', (req, res) => {
   const userId = req.session.user_id;
+  const user = userId ? users[userId] : null;
 
   // Check if the user is already logged in
   if (userId && users[userId]) {
     res.redirect("/urls"); // Redirect to the /urls page
   } else {
-    res.render("login"); // Render the login page
+    res.render("login", { user: user }); // Render the login page
   }
 });
 
@@ -314,12 +317,13 @@ app.post("/logout", (req, res) => {
 
 app.get("/register", (req, res) => {
   const userId = req.session.user_id;
+  const user = users[userId];
 
   // check if the user is already logged in
   if (userId && users[userId]) {
     res.redirect("/urls"); // redirect to the /urls page
   } else {
-    res.render("register"); // render the register page
+    res.render("register", { user: null }); // render the register page
   }
   
 });
@@ -356,7 +360,6 @@ app.post('/register', (req, res) => {
   users[userId] = newUser;
 
   // Set the user_id cookie with the generated ID
-  // res.session("user_id", userId);
   req.session.user_id = userId;
 
   res.redirect('/urls');
